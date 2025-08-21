@@ -10,6 +10,7 @@ namespace WebApi
     {
         protected void Application_Start()
         {
+            var type = typeof(Raven.Client.Document.DocumentStore);
             AreaRegistration.RegisterAllAreas();
             GlobalConfiguration.Configure(WebApiConfig.Register);
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);

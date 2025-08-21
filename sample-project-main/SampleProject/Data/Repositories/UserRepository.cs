@@ -56,5 +56,23 @@ namespace Data.Repositories
         {
             base.DeleteAll<UsersListIndex>();
         }
+
+        public User GetUserByTag(string tag)
+        {
+            var query = _documentSession.Advanced.DocumentQuery<User, UsersByTagsIndex>()
+               .WaitForNonStaleResults();
+
+                query = query.Where($"Tag:*{Quote(tag)}*"); //This is to escape Lucene special characters.
+
+
+            return query.ToList().FirstOrDefault();
+        }
+
+        private string Quote(string value)
+        {
+            // Basic escaping for Lucene special characters
+            if (string.IsNullOrEmpty(value)) return value;
+            return value.Replace("\\", "\\\\").Replace(":", "\\:").Replace("*", "\\*").Replace("?", "\\?");
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using BusinessEntities;
@@ -28,68 +29,137 @@ namespace WebApi.Controllers
         [HttpPost]
         public HttpResponseMessage CreateUser(Guid userId, [FromBody] UserModel model)
         {
-            var user = _createUserService.Create(userId, model.Name, model.Email, model.Type, model.AnnualSalary, model.Tags);
-            return Found(new UserData(user));
+            if (model == null)
+                return Request.CreateResponse(HttpStatusCode.BadRequest, new { Message = "Request body cannot be null." });
+            if (!ModelState.IsValid)
+                return Request.CreateResponse(HttpStatusCode.BadRequest, ModelState);
+
+            try
+            {
+
+                var user = _createUserService.Create(userId, model.Name, model.Email, model.Type, model.AnnualSalary, model.Tags);
+                return Found(new UserData(user));
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Exception while creating user :  "+ex.Message );
+            }
         }
+
 
         [Route("{userId:guid}/update")]
         [HttpPost]
         public HttpResponseMessage UpdateUser(Guid userId, [FromBody] UserModel model)
         {
-            var user = _getUserService.GetUser(userId);
-            if (user == null)
+            if (model == null)
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "Request body cannot be null.");
+            if (!ModelState.IsValid)
             {
-                return DoesNotExist();
+                return Request.CreateResponse(HttpStatusCode.BadRequest, ModelState);
             }
-            _updateUserService.Update(user, model.Name, model.Email, model.Type, model.AnnualSalary, model.Tags);
-            return Found(new UserData(user));
+
+            try
+            {
+
+                var user = _getUserService.GetUser(userId);
+                if (user == null)
+                {
+                    return DoesNotExist();
+                }
+                _updateUserService.Update(user, model.Name, model.Email, model.Type, model.AnnualSalary, model.Tags);
+                return Found(new UserData(user));
+            }
+            catch(Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error while updating userinfo : {ex.Message}");
+            }
         }
 
         [Route("{userId:guid}/delete")]
         [HttpDelete]
         public HttpResponseMessage DeleteUser(Guid userId)
         {
-            var user = _getUserService.GetUser(userId);
-            if (user == null)
+            try
             {
-                return DoesNotExist();
+                var user = _getUserService.GetUser(userId);
+                if (user == null)
+                {
+                    return DoesNotExist();
+                }
+                _deleteUserService.Delete(user);
+                return Found();
             }
-            _deleteUserService.Delete(user);
-            return Found();
+            catch (Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error while deleteing a user : {ex.Message}");
+            }
         }
 
         [Route("{userId:guid}")]
         [HttpGet]
         public HttpResponseMessage GetUser(Guid userId)
         {
-            var user = _getUserService.GetUser(userId);
-            return Found(new UserData(user));
+            try
+            {
+                var user = _getUserService.GetUser(userId);
+                return Found(new UserData(user));
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error while retreiving user details : {ex.Message}");
+            }
         }
 
         [Route("list")]
         [HttpGet]
         public HttpResponseMessage GetUsers(int skip, int take, UserTypes? type = null, string name = null, string email = null)
         {
-            var users = _getUserService.GetUsers(type, name, email)
-                                       .Skip(skip).Take(take)
-                                       .Select(q => new UserData(q))
-                                       .ToList();
-            return Found(users);
+            try
+            {
+
+                var users = _getUserService.GetUsers(type, name, email)
+                                           .Skip(skip).Take(take)
+                                           .Select(q => new UserData(q))
+                                           .ToList();
+                return Found(users);
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error while retreiving users list : {ex.Message}");
+            }
+
         }
 
         [Route("clear")]
         [HttpDelete]
         public HttpResponseMessage DeleteAllUsers()
         {
-            _deleteUserService.DeleteAll();
-            return Found();
+            try
+            {
+                _deleteUserService.DeleteAll();
+                return Found();
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error while deleting all users data  : {ex.Message}");
+            }
         }
 
         [Route("list/tag")]
         [HttpGet]
         public HttpResponseMessage GetUsersByTag(string tag)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var userInfo = _getUserService.GetUserByTag(tag);
+                return Request.CreateResponse(HttpStatusCode.OK, userInfo);
+            }
+            catch (Exception ex)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error while retreiving user details by tag : {ex.Message}");
+            }
         }
+
+
     }
 }
